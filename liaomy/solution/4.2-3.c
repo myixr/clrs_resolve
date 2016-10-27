@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <stdlib.h>
+#include <time.h>
 
 
 /* 
@@ -59,6 +60,12 @@ void matrix_initHeader( matrix_header_t *m );
 void matrix_fullValue( matrix_header_t *m, float value );
 
 /*
+ * @brief 用某个值填充矩阵
+ * 调用后矩阵m中的所有元素的值都是value
+ */
+void matrix_fullRandomValue( matrix_header_t *m );
+
+/*
  * @brief 创建子矩阵
  * 创建m矩阵的子矩阵,两个矩阵共享数据
  * 确保sub是空矩阵
@@ -111,9 +118,8 @@ void matrix_assign( matrix_header_t *to, const matrix_header_t *from ){
 	assert( from->cols == to->cols );
 	assert( from->data != to->data );
 
-	int r,c;
-	for( r=0; r<from->rows; ++r ){
-		for( c=0; c<from->cols; ++c ){
+	for( int r=0; r<from->rows; ++r ){
+		for( int c=0; c<from->cols; ++c ){
 			matrix_setElem( to, r, c,
 					matrix_getElem( from, r, c ) );
 		}
@@ -123,10 +129,9 @@ void matrix_assign( matrix_header_t *to, const matrix_header_t *from ){
 void matrix_print( const matrix_header_t *m ){
 	printf( "Matrix @%lx\n", (unsigned long)m->data );
 	printf( "       rows=%d cols=%d\n", m->rows,m->cols );
-	int r,c;
-	for( r=0; r<m->rows; ++r ){
+	for( int r=0; r<m->rows; ++r ){
 		printf( "  " );
-		for( c=0; c<m->cols; ++c ){
+		for( int c=0; c<m->cols; ++c ){
 			printf( "%f ", matrix_getElem( m,r,c ) );
 		}
 		printf( "\n" );
@@ -188,9 +193,8 @@ void matrix_subMatrix( matrix_header_t *sub, const matrix_header_t *m, int start
 void matrix_fullValue( matrix_header_t *m, float value ){
 	assert( m->data != NULL );
 
-	int r,c;
-	for( r=0; r<m->rows; ++r ){
-		for( c=0; c<m->cols; ++c ){
+	for( int r=0; r<m->rows; ++r ){
+		for( int c=0; c<m->cols; ++c ){
 			matrix_setElem( m, r,c, value );
 		}
 	}
@@ -208,9 +212,8 @@ void matrix_add( matrix_header_t *result, const matrix_header_t *m1, const matri
 		assert( result->cols == m1->cols );
 	}
 
-	int r,c;
-	for( r=0; r<result->rows; ++r ){
-		for( c=0; c<result->cols; ++c ){
+	for( int r=0; r<result->rows; ++r ){
+		for( int c=0; c<result->cols; ++c ){
 			matrix_setElem( result, r,c,
 					matrix_getElem( m1, r,c ) +
 					matrix_getElem( m2, r,c ) );
@@ -230,9 +233,8 @@ void matrix_subtract( matrix_header_t *result, const matrix_header_t *m1, const 
 		assert( result->cols == m1->cols );
 	}
 
-	int r,c;
-	for( r=0; r<result->rows; ++r ){
-		for( c=0; c<result->cols; ++c ){
+	for( int r=0; r<result->rows; ++r ){
+		for( int c=0; c<result->cols; ++c ){
 			matrix_setElem( result, r,c,
 					matrix_getElem( m1, r,c ) -
 					matrix_getElem( m2, r,c ) );
@@ -251,15 +253,24 @@ void matrix_multi( matrix_header_t *result, const matrix_header_t *m1, const mat
 	}
 
 
-	int i,j,k;
-	for( i=0; i<m1->rows; ++i ){
-		for( j=0; j<m2->cols; ++j ){
+	for( int i=0; i<m1->rows; ++i ){
+		for( int j=0; j<m2->cols; ++j ){
 			float elem = 0;
-			for( k=0; k<m1->cols; ++k ){
+			for( int k=0; k<m1->cols; ++k ){
 				elem += matrix_getElem( m1, i,k ) *
 					matrix_getElem( m2, k,j );
 			}
 			matrix_setElem( result, i,j, elem );
+		}
+	}
+}
+
+void matrix_fullRandomValue( matrix_header_t *m ){
+	int r,c;
+	for( r=0; r<m->rows; ++r ){
+		float value = (rand()%10000-5000)/5000.0;
+		for( c=0; c<m->cols; ++c ){
+			matrix_setElem( m, r,c, value );
 		}
 	}
 }
@@ -272,6 +283,12 @@ void matrix_strassen( matrix_header_t *result, const matrix_header_t *m1, const 
 
 	if( result->data == NULL ){
 		matrix_new( result, m1->rows, m1->cols );
+	}
+
+	/* 递归结束条件 */
+	if( m1->rows == 1 ){
+		matrix_setElem( result, 0,0, matrix_getElem(m1,0,0)*matrix_getElem(m2,0,0) );
+		return;
 	}
 
 	matrix_header_t a11,a12,a21,a22;
@@ -320,7 +337,7 @@ void matrix_strassen( matrix_header_t *result, const matrix_header_t *m1, const 
 
 	matrix_subtract( &s1, &b12, &b22 );
 	matrix_add(      &s2, &a11, &a12 );
-	matrix_add(      &s3, &a12, &a22 );
+	matrix_add(      &s3, &a21, &a22 );
 	matrix_subtract( &s4, &b21, &b11 );
 	matrix_add(      &s5, &a11, &a22 );
 	matrix_add(      &s6, &b11, &b22 );
@@ -338,13 +355,13 @@ void matrix_strassen( matrix_header_t *result, const matrix_header_t *m1, const 
 	matrix_initHeader( &p6 );
 	matrix_initHeader( &p7 );
 
-	matrix_multi( &p1, &a11, &s1 );
-	matrix_multi( &p2, &s2, &b22 );
-	matrix_multi( &p3, &s3, &b11 );
-	matrix_multi( &p4, &a22, &s4 );
-	matrix_multi( &p5, &s5, &s6 );
-	matrix_multi( &p6, &s7, &s8 );
-	matrix_multi( &p7, &s9, &s10 );
+	matrix_strassen( &p1, &a11, &s1 );
+	matrix_strassen( &p2, &s2, &b22 );
+	matrix_strassen( &p3, &s3, &b11 );
+	matrix_strassen( &p4, &a22, &s4 );
+	matrix_strassen( &p5, &s5, &s6 );
+	matrix_strassen( &p6, &s7, &s8 );
+	matrix_strassen( &p7, &s9, &s10 );
 
 	/* c11 = p5 + p4 - p2 + p6 */
 	matrix_add( &c11, &p5, &p4 );
@@ -358,7 +375,7 @@ void matrix_strassen( matrix_header_t *result, const matrix_header_t *m1, const 
 	matrix_add( &c21, &p3, &p4 );
 
 	/* c22 = p5 + p1 -p3 -p7 */
-	matrix_add( &c22, &p5, &p7 );
+	matrix_add( &c22, &p5, &p1 );
 	matrix_subtract( &c22, &c22, &p3 );
 	matrix_subtract( &c22, &c22, &p7 );
 
@@ -393,35 +410,46 @@ void matrix_strassen( matrix_header_t *result, const matrix_header_t *m1, const 
 	matrix_free( &p7 );
 }
 
+#define N 128
+
 int main( void ){
 	matrix_header_t m1;
 	matrix_header_t m2;
 	matrix_initHeader( &m1 );
 	matrix_initHeader( &m2 );
 
-	matrix_new( &m1, 2, 2 );
-	matrix_new( &m2, 2, 2 );
+	matrix_new( &m1, N, N );
+	matrix_new( &m2, N, N );
 
-	matrix_setElem( &m1, 0,0, 1 );
-	matrix_setElem( &m1, 0,1, 2 );
-	matrix_setElem( &m1, 1,0, 4 );
-	matrix_setElem( &m1, 1,1, 5 );
+	matrix_fullRandomValue( &m1 );
+	matrix_fullRandomValue( &m2 );
 
-	matrix_setElem( &m2, 0,0, 1 );
-	matrix_setElem( &m2, 0,1, 2 );
-	matrix_setElem( &m2, 1,0, 3 );
-	matrix_setElem( &m2, 1,1, 4 );
+	//matrix_print( &m1 );
+	//matrix_print( &m2 );
 
 	matrix_header_t m3;
 	matrix_initHeader( &m3 );
-
-	matrix_print( &m1 );
-	matrix_print( &m2 );
+	clock_t c1 = clock();
 	matrix_strassen( &m3, &m1, &m2 );
-	matrix_print( &m3 );
+	clock_t c2 = clock();
+
+	matrix_header_t m4;
+	matrix_initHeader( &m4 );
+	clock_t c3 = clock();
+	matrix_multi( &m4, &m1, &m2 );
+	clock_t c4 = clock();
+
+	//matrix_print( &m3 );
+	//matrix_print( &m4 );
 
 	matrix_free( &m1 );
 	matrix_free( &m2 );
 	matrix_free( &m3 );
+	matrix_free( &m4 );
+
+	printf( "-------------------------\n" );
+	printf( "Matrix size : %d\n", N );
+	printf( " matrix multiply time: %f\n", (double)(c2-c1)/CLOCKS_PER_SEC );
+	printf( " strassen method time: %f\n", (double)(c4-c3)/CLOCKS_PER_SEC );
 }
 
