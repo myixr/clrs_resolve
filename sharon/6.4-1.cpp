@@ -7,7 +7,7 @@
 #include <stdlib.h>
 
 void Max_HeapIfy(int *array,int size,int i);
-void Build_Max_HeapIfy(int *array,int size);
+void Build_Max_Heap(int *array,int size);
 void Heap_Sort(int *array,int size);
 int main()
 {
@@ -48,7 +48,7 @@ void Max_HeapIfy(int *array,int size,int i)
 		Max_HeapIfy(array,size,largest);
 	}	
 }
-void Build_Max_HeapIfy(int *array,int size)
+void Build_Max_Heap(int *array,int size)
 {
 	int i;
 	for(i = size/2 - 1;i >=0;i--)
@@ -59,7 +59,7 @@ void Build_Max_HeapIfy(int *array,int size)
 void Heap_Sort(int *array,int size)
 {
 	int i,temp;
-	Build_Max_HeapIfy(array,size);
+	Build_Max_Heap(array,size);
 	for(i = size - 1;i >= 1;i--)
 	{
 		temp = array[0];
