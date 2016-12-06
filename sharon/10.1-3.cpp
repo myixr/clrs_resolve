@@ -37,6 +37,8 @@ int main()
 		printf("%d\t",Q->data[i]);
 	}
 	printf("\nQueue head is:%d  tail is:%d\n",Q->head,Q->tail);
+	
+	free(Q);
 	return 0;
 }
 void Queue_Init(Queue *Q)

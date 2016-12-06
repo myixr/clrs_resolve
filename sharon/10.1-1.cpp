@@ -35,6 +35,7 @@ int main()
 		printf("%d\t",S->data[i]);
 	}
 	printf("\nStack top is:%d \n",S->top);
+	free(S);
 	return 0;
 }
 void Stack_Init(Stack *S)
